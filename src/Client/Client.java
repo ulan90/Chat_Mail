@@ -1,5 +1,6 @@
 package Client;
 // checking a commitment
+//checking a commitment2
 import java.net.*;
 import java.io.*;
 import java.util.*;
