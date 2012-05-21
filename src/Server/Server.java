@@ -17,13 +17,12 @@ class Server
 
         while(true)
         {    
-            Socket CSoc=soc.accept();        
+            Socket CSoc=soc.accept();
             AcceptClient obClient=new AcceptClient(CSoc);
         }
     }
     public static void main(String args[]) throws Exception
     {
-        
         Server ob=new Server();
     }
 
@@ -43,7 +42,7 @@ class AcceptClient extends Thread
 
         System.out.println("User Logged In :" + LoginName);
         LoginNames.add(LoginName);
-        ClientSockets.add(ClientSocket);    
+        ClientSockets.add(ClientSocket);
         start();
     }
 
@@ -86,9 +85,9 @@ class AcceptClient extends Thread
                     {
                         if(LoginNames.elementAt(iCount).equals(Sendto))
                         {    
-                            Socket tSoc=(Socket)ClientSockets.elementAt(iCount);                            
+                            Socket tSoc=(Socket)ClientSockets.elementAt(iCount);
                             DataOutputStream tdout=new DataOutputStream(tSoc.getOutputStream());
-                            tdout.writeUTF(msg);                            
+                            tdout.writeUTF(msg);
                             break;
                         }
                     }
