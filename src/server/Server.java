@@ -5,8 +5,6 @@ import java.sql.*;
 import java.util.*;
 import java.io.*;
 
-import javax.swing.JOptionPane;
-
 class Server
 {
 	final String DATABASE_URL = "jdbc:mysql://localhost/mail_db";
@@ -14,8 +12,6 @@ class Server
 	private PreparedStatement pst;
 	private ResultSet rs;
 	private Statement st;
-
-	private ArrayList<String> list  = new ArrayList<String>();
 
 	static Vector ClientSockets;
 	static Vector LoginNames;
@@ -36,12 +32,16 @@ class Server
 	}
 
 class AcceptClient extends Thread{
-	private Socket ClientSocket;
+	private Socket ClientSocket = null;
 	private DataInputStream din;
 	private DataOutputStream dout;
 	private String username_pwd[];
 	private String login;
 	private String password;
+
+	private ArrayList<String> contactArrayList  = new ArrayList<String>();
+	private ArrayList<String> nameSurnameArrayList  = new ArrayList<String>();
+	
 	AcceptClient (Socket CSoc) throws Exception{
 		ClientSocket=CSoc;
 
@@ -55,163 +55,164 @@ class AcceptClient extends Thread{
 			dout.writeUTF("&false&");
 			username_pwd=din.readUTF().split("&");
 		}
-		dout.writeUTF("&true&");
+		queryClientNameSurname();
+		dout.writeUTF("&true&"+arrayListToOneString(nameSurnameArrayList));
+		sendContactList();
+		nameSurnameArrayList.clear();
 		System.out.println("User Logged In :" + login);
 		LoginNames.add(login);
 		ClientSockets.add(ClientSocket);
 		start();
 	}
-
 	public void run(){
 		while(true){
 			try{
-				try{
-					String msg=new String();
-					msg=din.readUTF();
-					if(msg.equals("&queryContactList&")){
-						databaseList();
-						String contactList="";
-						for(String s : list)
-							contactList += s + "#";
-						dout.writeUTF(contactList);
-						list.clear();
-					}
-				}catch(Exception ex){}
-
 				String msgFromClient=new String();
 				msgFromClient=din.readUTF();
 				StringTokenizer st=new StringTokenizer(msgFromClient);
-				String Sendto=st.nextToken();                
-				String MsgType=st.nextToken();
+				String SendFrom=st.nextToken();
+				String Sendto=st.nextToken();
 				int iCount=0;
 
-				if(MsgType.equals("LOGOUT")){
+				if(Sendto.equals("LOGOUT")){
 					for(iCount=0;iCount<LoginNames.size();iCount++){
-						if(LoginNames.elementAt(iCount).equals(Sendto)){
+						if(LoginNames.elementAt(iCount).equals(SendFrom)){
 							LoginNames.removeElementAt(iCount);
 							ClientSockets.removeElementAt(iCount);
-							System.out.println("User " + Sendto +" Logged Out ...");
+							System.out.println("User " + SendFrom +" Logged Out ...");
 							break;
 						}
 					}
 				}
+
 				else{
 					String msg="";
 					while(st.hasMoreTokens()){
-						msg=msg+" " +st.nextToken();
+						msg = msg + " " + st.nextToken();
 					}
 					for(iCount=0;iCount<LoginNames.size();iCount++){
-						if(LoginNames.elementAt(iCount).equals(Sendto)){    
+						if(LoginNames.elementAt(iCount).equals(Sendto)){
 							Socket tSoc=(Socket)ClientSockets.elementAt(iCount);
 							DataOutputStream tdout=new DataOutputStream(tSoc.getOutputStream());
-							tdout.writeUTF(msg);
+							tdout.writeUTF(SendFrom + " says :" + msg);
 							break;
 						}
 					}
 					if(iCount==LoginNames.size()){
-						dout.writeUTF("I am offline");
+						dout.writeUTF(Sendto + " says :I am offline");
 					}
 					else{}
 				}
-				if(MsgType.equals("LOGOUT")){
+				if(Sendto.equals("LOGOUT")){
 					break;
 				}
-			}
-			catch(Exception ex){
+			}catch(Exception ex){
 				ex.printStackTrace();
 			}
 		}
 	}
-	
-/////////////////////////////////////////////////////////////////////////
-	//Authentication.java
-		public void connect(){
-			try{
-				Class.forName("com.mysql.jdbc.Driver");
-				con=DriverManager.getConnection(DATABASE_URL, "mail_login", "123456");
-				pst=con.prepareStatement("SELECT * FROM users WHERE user_name=? and password=?");
-				
-				st = con.createStatement();
-				rs = st.executeQuery("SELECT * FROM users");
-				ResultSetMetaData metaData = rs.getMetaData();
-				int numberOfColumns = metaData.getColumnCount();
-				System.out.println( "Authors Table of Books Database:\n" );
-				for ( int i = 1; i <= numberOfColumns; i++ )
-					System.out.printf( "%-17s\t", metaData.getColumnName( i ) );
+
+	public void queryClientNameSurname(){
+		try {
+			rs = st.executeQuery("SELECT Name, Surname FROM users WHERE user_name='"+login+"'");
+			while (rs.next()){
+				nameSurnameArrayList.add(rs.getString("Name") + " " + rs.getString("Surname"));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	public String arrayListToOneString(ArrayList<String> l){
+		String arrListToOneString="";
+		for(String s : l)
+			arrListToOneString += s + "#";
+		return arrListToOneString;
+	}
+
+	public void sendContactList(){
+		try{
+			String msg=new String();
+			msg=din.readUTF();
+			if(msg.equals("&queryContactList&")){
+				dout.writeUTF(arrayListToOneString(contactArrayList));
+				contactArrayList.clear();
+			}
+		}catch(Exception ex){}
+	}
+
+	public void connect(){
+		try{
+			Class.forName("com.mysql.jdbc.Driver");
+			con=DriverManager.getConnection(DATABASE_URL, "mail_login", "123456");
+			pst=con.prepareStatement("SELECT * FROM users WHERE user_name=? and password=?");
+			st = con.createStatement();
+
+			//print all users in a console
+			/*st = con.createStatement();
+			rs = st.executeQuery("SELECT * FROM users");
+			ResultSetMetaData metaData = rs.getMetaData();
+			int numberOfColumns = metaData.getColumnCount();
+			System.out.println( "Authors Table of users in Database:\n" );
+			for ( int i = 1; i <= numberOfColumns; i++ )
+				System.out.printf( "%-17s\t", metaData.getColumnName( i ) );
 				System.out.println();
-				
-				while(rs.next())
-				{
-					for ( int i = 1; i <= numberOfColumns; i++ )
-						System.out.printf( "%-17s\t", rs.getObject( i ) );
-					System.out.println();
-				} // end while
-			}
-			catch( SQLException sqlException )
+
+			while(rs.next())
 			{
-				sqlException.printStackTrace();
-			} // end catch
-			catch(Exception e){
-				System.out.println("catch");
-				System.out.println(e);
-			}
+				for ( int i = 1; i <= numberOfColumns; i++ )
+					System.out.printf( "%-17s\t", rs.getObject( i ) );
+				System.out.println();
+			} // end while*/
 		}
+		catch( SQLException sqlException ){
+			sqlException.printStackTrace();
+		} // end catch
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
 
-		public boolean checkLogin(String[] arr){
-			login = arr[0];
-			password = arr[1];
-			try{
-				pst.setString(1, login);
-				pst.setString(2, password);
-
-				rs=pst.executeQuery();
-				if(rs.next()){
-					return true;
-				}
-				else
-					return false;
-			}catch(Exception e){
-				System.out.println("Error while walidating "+e);
+	public boolean checkLogin(String[] arr){
+		login = arr[0];
+		password = arr[1];
+		try{
+			pst.setString(1, login);
+			pst.setString(2, password);
+			rs=pst.executeQuery();
+			if(rs.next()){
+				databaseList();
+				return true;
+			}
+			else
 				return false;
+		}catch(Exception e){
+			System.out.println("Error while walidating "+e);
+			return false;
+		}
+	}
+
+	public void databaseList(){
+		try{
+			rs=st.executeQuery("SELECT user_name FROM users");
+			while (rs.next()){
+				contactArrayList.add(rs.getString("user_name"));
 			}
 		}
-
-		public void closeConnection(){
-			try
-			{
-				rs.close();
-				st.close();
-				con.close();
-			}
-			catch ( Exception exception )
-			{
-				exception.printStackTrace();
-			}
+		catch (Exception e){
+			System.out.println("Retrieving Data Fail");
 		}
+	}
 
-	//end Authentication.java	
-
-	//ContactList.java
-		public void databaseList(){
-			try{
-				rs=st.executeQuery("SELECT Name, Surname FROM users");
-				while (rs.next()){
-					list.add(rs.getString("Name") + " " + rs.getString("Surname"));
-				}
-			}
-			catch (Exception e){
-				System.out.println("Retrieving Data Fail");
-			}
-			/*try{
-				Class.forName("com.mysql.jdbc.Driver");
-				con=DriverManager.getConnection(DATABASE_URL, "mail_login", "123456");
-				st = con.createStatement();
-			}
-			catch (Exception e){
-				JOptionPane.showMessageDialog(null,"Failed to Connect to Database","Error Connection", JOptionPane.WARNING_MESSAGE);
-				System.exit(0);
-			}*/
+	public void closeConnection(){
+		try{
+			rs.close();
+			st.close();
+			con.close();
 		}
-		//end ContactList
+		catch ( Exception exception )
+		{
+			exception.printStackTrace();
+		}
+	}
 }//end of AcceptClient()
 }//end of Server()

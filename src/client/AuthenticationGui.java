@@ -1,18 +1,11 @@
 package client;
 
-
-//I'VE COPYIED ALL CLASSES INTO AuthenticationGui.java FILE
-//not finished yet,at next commitment I think, I'll finish
-
-
 import java.awt.*;
-
-import javax.swing.*;
-
 import java.awt.event.*;
+import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
 
 public class AuthenticationGui extends JFrame{
 	private JLabel l_name,l_pass;
@@ -44,8 +37,7 @@ public class AuthenticationGui extends JFrame{
 		
 		c=getContentPane();
 		c.setLayout(new FlowLayout());
-
-//		server = new Server();
+		
 		handle = new handler();
 
 		//swing components
@@ -93,6 +85,12 @@ public class AuthenticationGui extends JFrame{
 								t_pass.setText(null);
 							}
 							else{
+								String a[] = fromServer.split("&true&");
+								fromServer="";
+								for(String s : a)
+									fromServer += s;
+								a = fromServer.split("#");
+								System.out.println(a[0]+","+a.length);
 								ContactList cList = new ContactList(username);
 								setVisible(false);
 							}
@@ -104,64 +102,183 @@ public class AuthenticationGui extends JFrame{
 	public static void main(String args[]) throws Exception{
 		AuthenticationGui authGui = new AuthenticationGui();
 	}
-	public class ContactList extends JFrame{
+	public class ContactList extends JFrame implements Runnable{
 		private DefaultListModel model;
+		private JButton jButton1;
+		private JButton jButton2;
 		private JList dbList;
-		private JPanel p;
+		private JPanel jPanel1;
+		private JPanel jPanel2;
+		private JPanel jPanel3;
+		private JScrollPane jScrollPane1;
+		private JScrollPane jScrollPane2;
+		private JScrollPane jScrollPane3;
+		private JTextArea jTextArea1;
+		private JTextArea jTextArea2;
+		private Thread t=null;
+
 		private String chatWith;
 		private String username;
 		ContactList(String uname) throws IOException{
-			super( "@mail.ru" );
-			setBounds(1000,10,300,650);
-			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			super( uname );
 			username = uname;
+			initComponents();
+			t=new Thread(this);
+			t.start();
+		}
+		// Firstly I draw a GUI of contact list and messaging in the NetBeans and copied the code of GUI
+		// then I made some changes added listener to "EXIT","Send" buttons and mouse click to a JList
+		public void initComponents() throws IOException{
+			setResizable(false);
+			jPanel1 = new JPanel();
+			jPanel2 = new JPanel();
+			jPanel3 = new JPanel();
 
-			//Constructing JList and DefaultListModel
+			jScrollPane1 = new JScrollPane();
+			jScrollPane2 = new JScrollPane();
+			jScrollPane3 = new JScrollPane();
+
+			jTextArea1 = new JTextArea();
+			jTextArea2 = new JTextArea();
+
+			jButton1 = new JButton();
+			jButton2 = new JButton();
+			
 			model = new DefaultListModel();
 			dbList = new JList(model);
-			
-			//Setting up JList property
-			dbList.setVisibleRowCount(29);
-			dbList.setFixedCellHeight(20);
-			dbList.setFixedCellWidth(250);
-			dbList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			
-			p = new JPanel();
-			p.setBorder(BorderFactory.createTitledBorder("Contacts:"));
-			p.add(new JScrollPane(dbList));
-			
-			//Setting up the container ready for the components to be added.
-			Container pane = getContentPane();
-			setContentPane(pane);
 
-			//Setting up the container layout
-			GridLayout grid = new GridLayout(1,2);
-			pane.setLayout(grid);
+			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+			jPanel3.setBackground(new Color(0, 204, 0));
+
+			jPanel1.setBackground(new Color(0, 204, 0));
+			jPanel1.setBorder(BorderFactory.createTitledBorder(null, "Message", TitledBorder.CENTER, TitledBorder.DEFAULT_POSITION));
+
+			jTextArea1.setColumns(20);
+			jTextArea1.setRows(5);
+			jScrollPane1.setViewportView(jTextArea1);
+
+			jTextArea2.setColumns(20);
+			jTextArea2.setRows(5);
+			jScrollPane2.setViewportView(jTextArea2);
+
+			jButton1.setText("Send");
+			jButton1.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent evt) {
+					SENDButtonPressed(evt);
+				}
+			});
+
+			GroupLayout jPanel1Layout = new GroupLayout(jPanel1);
+			jPanel1.setLayout(jPanel1Layout);
+			jPanel1Layout.setHorizontalGroup(jPanel1Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addComponent(jScrollPane1, GroupLayout.DEFAULT_SIZE, 507, Short.MAX_VALUE)
+					.addComponent(jScrollPane2, GroupLayout.Alignment.TRAILING)
+					.addGroup(GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
+							.addGap(0, 0, Short.MAX_VALUE)
+							.addComponent(jButton1))
+			);
+			jPanel1Layout.setVerticalGroup(jPanel1Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addGroup(jPanel1Layout.createSequentialGroup()
+							.addComponent(jScrollPane1, GroupLayout.DEFAULT_SIZE, 225, Short.MAX_VALUE)
+							.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+							.addComponent(jScrollPane2, GroupLayout.PREFERRED_SIZE, 74, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+							.addComponent(jButton1))
+			);
+
+			jPanel2.setBackground(new java.awt.Color(0, 204, 0));
+			jPanel2.setBorder(BorderFactory.createTitledBorder(null, "Contacts:", TitledBorder.CENTER, TitledBorder.DEFAULT_POSITION));
+
+			jButton2.setText("EXIT");
+			jButton2.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent evt) {
+					EXITButtonPressed(evt);
+				}
+			});
+			//add all user names to ArrayList
 			databaseList();
 
-			pane.add(p);
-			setVisible(true);
-			setResizable(false);
-			
+			jScrollPane3.setViewportView(dbList);
+
 			dbList.addMouseListener(new MouseAdapter(){
 				public void mouseClicked(MouseEvent me){
 					chatWith = dbList.getSelectedValue().toString();
 					if(chatWith != null){
 						try {
-							System.out.println(username+","+chatWith);
-							Client client = new Client(username,chatWith);
-							client.setup();
+							System.out.println(chatWith);
 						} catch (Exception e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 					}
 				}
 			  }
 			);
+			GroupLayout jPanel2Layout = new GroupLayout(jPanel2);
+			jPanel2.setLayout(jPanel2Layout);
+			jPanel2Layout.setHorizontalGroup(
+					jPanel2Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addGroup(jPanel2Layout.createSequentialGroup()
+							.addContainerGap()
+							.addGroup(jPanel2Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+									.addComponent(jScrollPane3, GroupLayout.Alignment.TRAILING, GroupLayout.DEFAULT_SIZE, 203, Short.MAX_VALUE)
+									.addGroup(GroupLayout.Alignment.TRAILING, jPanel2Layout.createSequentialGroup()
+											.addGap(0, 0, Short.MAX_VALUE)
+											.addComponent(jButton2)))
+											.addContainerGap())
+			);
+			jPanel2Layout.setVerticalGroup(
+					jPanel2Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addGroup(jPanel2Layout.createSequentialGroup()
+							.addComponent(jScrollPane3)
+							.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+							.addComponent(jButton2))
+			);
+
+			GroupLayout jPanel3Layout = new GroupLayout(jPanel3);
+			jPanel3.setLayout(jPanel3Layout);
+			jPanel3Layout.setHorizontalGroup(
+					jPanel3Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addGroup(jPanel3Layout.createSequentialGroup()
+							.addComponent(jPanel1, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+							.addComponent(jPanel2, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+			);
+			jPanel3Layout.setVerticalGroup(
+					jPanel3Layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addComponent(jPanel2, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+					.addComponent(jPanel1, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+			);
+
+			GroupLayout layout = new GroupLayout(getContentPane());
+			getContentPane().setLayout(layout);
+			layout.setHorizontalGroup(
+					layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addComponent(jPanel3, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+					);
+			layout.setVerticalGroup(
+					layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+					.addComponent(jPanel3, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+			);
+			pack();
+			setVisible(true);
 		}
-		
+		public void SENDButtonPressed(ActionEvent evt) {
+			try {
+				dout.writeUTF(username + " " + chatWith + " " + " " + jTextArea2.getText().toString());
+				jTextArea1.append("\n" + username + " Says:" + jTextArea2.getText().toString());
+				jTextArea2.setText("");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	    }
+		public void EXITButtonPressed(ActionEvent evt) {
+			try{
+				dout.writeUTF(username + " LOGOUT");
+				System.exit(1);
+			}catch(Exception ex){}
+	    }
+
 		public void databaseList() throws IOException{
 			try{
 				dout.writeUTF("&queryContactList&");
@@ -171,66 +288,11 @@ public class AuthenticationGui extends JFrame{
 					model.addElement(contactList[i]);
 			}catch(Exception ex){}
 		}
-	}
-	
-	class Client extends JFrame implements Runnable
-	{
-		private TextField tf;
-		private TextArea ta;
-		private Button btnSend,btnClose;
-		private String sendTo;
-		private String LoginName;
-		private Thread t=null;
-		
-		Client(String LoginName,String chatwith) throws Exception{
-			super(LoginName);
-			this.LoginName=LoginName;
-			sendTo=chatwith;
-			tf=new TextField(50);
-			ta=new TextArea(50,50);
-			btnSend=new Button("Send");
-			btnClose=new Button("Close");
-			
-			t=new Thread(this);
-			t.start();
-		}
-		
-		public void setup(){
-			setSize(600,400);
-			setLayout(new GridLayout(2,1));
 
-			add(ta);
-			Panel p=new Panel();
-
-			p.add(tf);
-			p.add(btnSend);
-			p.add(btnClose);
-			add(p);
-			show();
-		}
-		
-		public boolean action(Event e,Object o){
-			if(e.arg.equals("Send")){
-				try{
-					dout.writeUTF(sendTo + " "  + "DATA" + " " + tf.getText().toString());
-					ta.append("\n" + LoginName + " Says:" + tf.getText().toString());
-					tf.setText("");
-				}catch(Exception ex){}
-			}
-			else if(e.arg.equals("Close")){
-				try{
-					dout.writeUTF(LoginName + " LOGOUT");
-					System.exit(1);
-				}catch(Exception ex){}
-			}
-
-			return super.action(e,o);
-		}
-		
 		public void run(){
 			while(true){
 				try{
-					ta.append( "\n" + sendTo + " Says :" + din.readUTF());
+					jTextArea1.append("\n"+din.readUTF());
 				}catch(Exception ex){
 					ex.printStackTrace();
 				}
