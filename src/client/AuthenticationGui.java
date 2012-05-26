@@ -4,8 +4,11 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import javax.swing.text.DefaultCaret;
 import java.io.*;
 import java.net.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class AuthenticationGui extends JFrame{
 	private JLabel l_name,l_pass;
@@ -14,30 +17,35 @@ public class AuthenticationGui extends JFrame{
 
 	private JButton button;
 	private Container c;
-	
-	private Socket soc;
+
 	private DataOutputStream dout;
 	private DataInputStream din;
 
-	
 	private String username;
 	private String pwd;
 	private String fromServer="&false&";
 	private String[] contactList;
-
+	private Socket soc;
 	private handler handle;
-//	private Server server;
 
-	AuthenticationGui() throws Exception{
+	AuthenticationGui(String socket, int port) throws Exception{
 		super("Login:");
-		
-		soc=new Socket("127.0.0.1",5217);
+		soc=new Socket(socket,port);
 		din=new DataInputStream(soc.getInputStream());
 		dout=new DataOutputStream(soc.getOutputStream());
+
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				try{
+					dout.writeUTF("LOGOUT&LOGOUT");
+					System.exit(1);
+				}catch(Exception ex){}
+			}
+		});
 		
 		c=getContentPane();
 		c.setLayout(new FlowLayout());
-		
+
 		handle = new handler();
 
 		//swing components
@@ -52,14 +60,13 @@ public class AuthenticationGui extends JFrame{
 
 		//add to container
 		c.add(l_name);
-		c.add(t_name); 
+		c.add(t_name);
 		c.add(l_pass);
 		c.add(t_pass);
 		c.add(button);
-
+		
 		//visual
 		setVisible(true);
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(500,250,300,130);
 		setResizable(false);
 	}
@@ -99,9 +106,7 @@ public class AuthenticationGui extends JFrame{
 				}
 		}
     }
-	public static void main(String args[]) throws Exception{
-		AuthenticationGui authGui = new AuthenticationGui();
-	}
+
 	public class ContactList extends JFrame implements Runnable{
 		private DefaultListModel model;
 		private JButton jButton1;
@@ -119,6 +124,7 @@ public class AuthenticationGui extends JFrame{
 
 		private String chatWith;
 		private String username;
+		private String messageFromServer = "serverIsOnline";
 		ContactList(String uname) throws IOException{
 			super( uname );
 			username = uname;
@@ -139,15 +145,28 @@ public class AuthenticationGui extends JFrame{
 			jScrollPane3 = new JScrollPane();
 
 			jTextArea1 = new JTextArea();
+			DefaultCaret caret = (DefaultCaret)jTextArea1.getCaret();
+			caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+			jTextArea1.setEditable( false );
 			jTextArea2 = new JTextArea();
 
 			jButton1 = new JButton();
 			jButton2 = new JButton();
 			
+			setBounds(new Rectangle(200, 100, 0, 0));
+
 			model = new DefaultListModel();
 			dbList = new JList(model);
-
-			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			addWindowListener(new WindowAdapter() {
+			      public void windowClosing(WindowEvent e) {
+			    	  if(!messageFromServer.equals("#EXIT#")){
+				    	  try{
+								dout.writeUTF(username + " LOGOUT");
+							}catch(Exception ex){}
+			    	  }
+			    	  System.exit(1);
+			      }
+			});
 
 			jPanel3.setBackground(new Color(0, 204, 0));
 
@@ -165,7 +184,10 @@ public class AuthenticationGui extends JFrame{
 			jButton1.setText("Send");
 			jButton1.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent evt) {
-					SENDButtonPressed(evt);
+					if(!messageFromServer.equals("#EXIT#"))
+						SENDButtonPressed(evt);
+					else
+						JOptionPane.showMessageDialog(null, "SERVER IS OFF!!!\nSORRY FOR DISCOMFORT!!!","From Server:",JOptionPane.ERROR_MESSAGE);
 				}
 			});
 
@@ -193,7 +215,12 @@ public class AuthenticationGui extends JFrame{
 			jButton2.setText("EXIT");
 			jButton2.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent evt) {
-					EXITButtonPressed(evt);
+					if(!messageFromServer.equals("#EXIT#")){
+						try{
+							dout.writeUTF(username + " LOGOUT");
+						}catch(Exception ex){}
+					}
+					System.exit(1);
 				}
 			});
 			//add all user names to ArrayList
@@ -272,12 +299,6 @@ public class AuthenticationGui extends JFrame{
 				e.printStackTrace();
 			}
 	    }
-		public void EXITButtonPressed(ActionEvent evt) {
-			try{
-				dout.writeUTF(username + " LOGOUT");
-				System.exit(1);
-			}catch(Exception ex){}
-	    }
 
 		public void databaseList() throws IOException{
 			try{
@@ -292,11 +313,22 @@ public class AuthenticationGui extends JFrame{
 		public void run(){
 			while(true){
 				try{
-					jTextArea1.append("\n"+din.readUTF());
+					messageFromServer = din.readUTF();
+					if(!messageFromServer.equals("#EXIT#")){
+						jTextArea1.append("\n" + messageFromServer);
+					}
+					else {
+						JOptionPane.showMessageDialog(null, "Server is Shut Down!!!\nSorry For Discomfort!!!","From Server",JOptionPane.ERROR_MESSAGE);
+						break;
+					}
 				}catch(Exception ex){
 					ex.printStackTrace();
 				}
 			}
 		}
+		
 	}
-}//class
+	public static void main(String[] args) throws Exception{
+		AuthenticationGui auth= new AuthenticationGui("127.0.0.1",234) ;
+	}//end of sub class ----> ContactList
+}// end of main class class ----> AuthenticationGui

@@ -5,13 +5,13 @@ import java.sql.*;
 import java.util.*;
 import java.io.*;
 
-class Server
-{
+class Server{
 	final String DATABASE_URL = "jdbc:mysql://localhost/mail_db";
 	private Connection con;
 	private PreparedStatement pst;
 	private ResultSet rs;
 	private Statement st;
+	private static serverGUI sGUI;
 
 	static Vector ClientSockets;
 	static Vector LoginNames;
@@ -28,6 +28,8 @@ class Server
 	}
 
 	public static void main(String args[]) throws Exception{
+		sGUI = new serverGUI();
+		sGUI.setVisible(true);
 		Server ob=new Server();
 	}
 
@@ -46,23 +48,32 @@ class AcceptClient extends Thread{
 		ClientSocket=CSoc;
 
 		connect();
-
+		
 		din=new DataInputStream(ClientSocket.getInputStream());
 		dout=new DataOutputStream(ClientSocket.getOutputStream());
 
 		username_pwd = din.readUTF().split("&");
-		while(!checkLogin(username_pwd)){
-			dout.writeUTF("&false&");
-			username_pwd=din.readUTF().split("&");
+		if(!username_pwd[0].equals("LOGOUT")){
+			while(!checkLogin(username_pwd)){
+				dout.writeUTF("&false&");
+				username_pwd=din.readUTF().split("&");
+			}
+			queryClientNameSurname();
+			dout.writeUTF("&true&"+arrayListToOneString(nameSurnameArrayList));
+			sendContactList();
+			nameSurnameArrayList.clear();
+			sGUI.jTextArea1.append("\nUser Logged In :" + login);
+			LoginNames.add(login);
+			ClientSockets.add(ClientSocket);
+			sGUI.setSockets(ClientSockets);
+			start();
 		}
-		queryClientNameSurname();
-		dout.writeUTF("&true&"+arrayListToOneString(nameSurnameArrayList));
-		sendContactList();
-		nameSurnameArrayList.clear();
-		System.out.println("User Logged In :" + login);
-		LoginNames.add(login);
-		ClientSockets.add(ClientSocket);
-		start();
+		else{
+			ClientSocket=null;
+			din = null;
+			dout = null;
+		}
+	
 	}
 	public void run(){
 		while(true){
@@ -79,7 +90,8 @@ class AcceptClient extends Thread{
 						if(LoginNames.elementAt(iCount).equals(SendFrom)){
 							LoginNames.removeElementAt(iCount);
 							ClientSockets.removeElementAt(iCount);
-							System.out.println("User " + SendFrom +" Logged Out ...");
+							sGUI.setSockets(ClientSockets);
+							sGUI.jTextArea1.append("\nUser " + SendFrom + " Logged Out ...");
 							break;
 						}
 					}
