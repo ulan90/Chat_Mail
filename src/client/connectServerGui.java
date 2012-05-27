@@ -3,10 +3,6 @@ import javax.swing.*;
 import javax.swing.GroupLayout.Alignment;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.Timer;
 public class connectServerGui extends JFrame{
 	private JButton jButton1;
 	private JButton jButton2;
@@ -50,8 +46,8 @@ public class connectServerGui extends JFrame{
 		jTextField2.setText("5217");
 
 		jButton1.setText("CONNECT");
-		jButton1.addActionListener(new java.awt.event.ActionListener() {
-			public void actionPerformed(java.awt.event.ActionEvent evt) {
+		jButton1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent evt) {
 				host = jTextField1.getText();
 				port = Integer.parseInt(jTextField2.getText());
 				if(host != null && port!=0){

@@ -27,6 +27,9 @@ public class serverGUI extends JFrame{
 		jTextArea1 = new JTextArea();
 		jButton1 = new JButton();
 
+		setBounds(new Rectangle(100, 100, 0, 0));
+		setResizable(false);
+
 		super.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				if(ClientSockets!= null)

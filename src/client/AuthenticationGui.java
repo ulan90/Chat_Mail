@@ -2,13 +2,12 @@ package client;
 
 import java.awt.*;
 import java.awt.event.*;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.DefaultCaret;
 import java.io.*;
 import java.net.*;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class AuthenticationGui extends JFrame{
 	private JLabel l_name,l_pass;
@@ -16,8 +15,11 @@ public class AuthenticationGui extends JFrame{
 	private JPasswordField t_pass;		//A special JTextField which hides input text
 
 	private JButton button;
+	private JButton button2;
 	private Container c;
+	private handler handle;
 
+	private Socket soc;
 	private DataOutputStream dout;
 	private DataInputStream din;
 
@@ -25,8 +27,6 @@ public class AuthenticationGui extends JFrame{
 	private String pwd;
 	private String fromServer="&false&";
 	private String[] contactList;
-	private Socket soc;
-	private handler handle;
 
 	AuthenticationGui(String socket, int port) throws Exception{
 		super("Login:");
@@ -53,17 +53,26 @@ public class AuthenticationGui extends JFrame{
 		l_pass=new JLabel("Password");
 		t_name=new JTextField(15);
 		t_pass=new JPasswordField(15);
+		
 		button=new JButton("Login");
+		button2=new JButton("Registration");
 
 		//adding action listener to the button
 		button.addActionListener(handle);
-
+		button2.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent evt) {
+					try {
+						Registration registr = new Registration(soc);
+					} catch (IOException e) {}
+			}
+		});
 		//add to container
 		c.add(l_name);
 		c.add(t_name);
 		c.add(l_pass);
 		c.add(t_pass);
 		c.add(button);
+		c.add(button2);
 		
 		//visual
 		setVisible(true);
@@ -80,24 +89,27 @@ public class AuthenticationGui extends JFrame{
 						username = t_name.getText();
 						pwd=null;
 						pwd=String.copyValueOf(temp_pwd);
-						if(pwd.isEmpty() || username.isEmpty()){
+						if(pwd.isEmpty() && username.equals("LOGOUT") || username.isEmpty()){
 							JOptionPane.showMessageDialog(null, "You didn't enter login or password!","Failed!!!",JOptionPane.ERROR_MESSAGE);
 							t_pass.setText(null);
 						}
-						if (!username.isEmpty() && !pwd.isEmpty()){
-							dout.writeUTF(username+"&"+pwd);
+						else if(username.equals("LOGOUT")){
+							JOptionPane.showMessageDialog(null, "Login failed!","Failed!!!",JOptionPane.ERROR_MESSAGE);
+							t_pass.setText(null);
+						}
+						else if (!username.isEmpty() && !pwd.isEmpty()){
+							dout.writeUTF(username.toLowerCase()+"&"+pwd);
 							fromServer = din.readUTF();
 							if(fromServer.equals("&false&")){
 								JOptionPane.showMessageDialog(null, "Login failed!","Failed!!!",JOptionPane.ERROR_MESSAGE);
 								t_pass.setText(null);
 							}
 							else{
-								String a[] = fromServer.split("&true&");
+								String nameSurname[] = fromServer.split("&true&");
 								fromServer="";
-								for(String s : a)
+								for(String s : nameSurname)
 									fromServer += s;
-								a = fromServer.split("#");
-								System.out.println(a[0]+","+a.length);
+								nameSurname = fromServer.split("#");
 								ContactList cList = new ContactList(username);
 								setVisible(false);
 							}
@@ -326,9 +338,5 @@ public class AuthenticationGui extends JFrame{
 				}
 			}
 		}
-		
-	}
-	public static void main(String[] args) throws Exception{
-		AuthenticationGui auth= new AuthenticationGui("127.0.0.1",234) ;
 	}//end of sub class ----> ContactList
 }// end of main class class ----> AuthenticationGui

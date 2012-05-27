@@ -43,16 +43,20 @@ class AcceptClient extends Thread{
 
 	private ArrayList<String> contactArrayList  = new ArrayList<String>();
 	private ArrayList<String> nameSurnameArrayList  = new ArrayList<String>();
+	private ArrayList<String> contactArrayListToRegistrate  = new ArrayList<String>();
 	
 	AcceptClient (Socket CSoc) throws Exception{
 		ClientSocket=CSoc;
 
 		connect();
-		
+
 		din=new DataInputStream(ClientSocket.getInputStream());
 		dout=new DataOutputStream(ClientSocket.getOutputStream());
-
+		
 		username_pwd = din.readUTF().split("&");
+		if(username_pwd[0].equals("REGISTR"))
+			Registrate(1);
+
 		if(!username_pwd[0].equals("LOGOUT")){
 			while(!checkLogin(username_pwd)){
 				dout.writeUTF("&false&");
@@ -75,6 +79,34 @@ class AcceptClient extends Thread{
 		}
 	
 	}
+
+	public void Registrate(int regCount) throws IOException, SQLException{
+		int j=0;
+		if(regCount==0)
+			username_pwd = din.readUTF().split("&");
+		databaseList();
+		for(int i=0; i<contactArrayList.size(); i++)
+			if(username_pwd[1].equals(contactArrayList.get(i))){
+				dout.writeBoolean(false);
+				contactArrayList.clear();
+				j++;
+				break;
+			}
+		if(j>0)
+			Registrate(0);
+		else{
+			dout.writeBoolean(true);
+			String messgFromClient[] = 	din.readUTF().split("&");
+			st.executeUpdate("INSERT INTO users (Name, Surname, user_name, password)" + "VALUES ('"+messgFromClient[1]+"','"+messgFromClient[2]+"','"+messgFromClient[0]+"','"+messgFromClient[3]+"')");
+			username_pwd = din.readUTF().split("&");
+			if(username_pwd[0].equals("REGISTR")){
+				contactArrayList.clear();
+				Registrate(1);
+			}
+		}
+		contactArrayList.clear();
+	}
+
 	public void run(){
 		while(true){
 			try{
@@ -134,9 +166,9 @@ class AcceptClient extends Thread{
 			e.printStackTrace();
 		}
 	}
-	public String arrayListToOneString(ArrayList<String> l){
+	public String arrayListToOneString(ArrayList<String> list){
 		String arrListToOneString="";
-		for(String s : l)
+		for(String s : list)
 			arrListToOneString += s + "#";
 		return arrListToOneString;
 	}
