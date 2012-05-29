@@ -80,7 +80,7 @@ public class serverGUI extends JFrame{
 		);
 
 		pack();
-		}
+	}
 
 	public void SendMessageToClientsServerIsShutDown(){
 		for(int i=0;i<ClientSockets.size();i++){
@@ -88,10 +88,7 @@ public class serverGUI extends JFrame{
 				Socket tSoc=(Socket)ClientSockets.elementAt(i);
 				DataOutputStream tdout=new DataOutputStream(tSoc.getOutputStream());
 				tdout.writeUTF("#EXIT#");
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			} catch (IOException e) {}
 		}
 	}
 }

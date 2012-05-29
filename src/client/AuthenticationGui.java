@@ -1,18 +1,19 @@
 package client;
 
-import java.awt.*;
-import java.awt.event.*;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.DefaultCaret;
+
+import java.awt.*;
+import java.awt.event.*;
+
 import java.io.*;
 import java.net.*;
 
 public class AuthenticationGui extends JFrame{
 	private JLabel l_name,l_pass;
 	private JTextField t_name;
-	private JPasswordField t_pass;		//A special JTextField which hides input text
+	private JPasswordField t_pass;
 
 	private JButton button;
 	private JButton button2;
@@ -27,7 +28,8 @@ public class AuthenticationGui extends JFrame{
 	private String pwd;
 	private String fromServer="&false&";
 	private String[] contactList;
-
+	private Registration registr;
+	
 	AuthenticationGui(String socket, int port) throws Exception{
 		super("Login:");
 		soc=new Socket(socket,port);
@@ -62,7 +64,7 @@ public class AuthenticationGui extends JFrame{
 		button2.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent evt) {
 					try {
-						Registration registr = new Registration(soc);
+						registr = new Registration(soc);
 					} catch (IOException e) {}
 			}
 		});
@@ -105,13 +107,14 @@ public class AuthenticationGui extends JFrame{
 								t_pass.setText(null);
 							}
 							else{
-								String nameSurname[] = fromServer.split("&true&");
+								/*String nameSurname[] = fromServer.split("&true&");
 								fromServer="";
 								for(String s : nameSurname)
 									fromServer += s;
-								nameSurname = fromServer.split("#");
+								nameSurname = fromServer.split("#");*/
 								ContactList cList = new ContactList(username);
 								setVisible(false);
+								registr.setVisible(false);
 							}
 						}
 					}catch(Exception ex){}
@@ -144,6 +147,7 @@ public class AuthenticationGui extends JFrame{
 			t=new Thread(this);
 			t.start();
 		}
+
 		// Firstly I draw a GUI of contact list and messaging in the NetBeans and copied the code of GUI
 		// then I made some changes added listener to "EXIT","Send" buttons and mouse click to a JList
 		public void initComponents() throws IOException{
@@ -169,6 +173,7 @@ public class AuthenticationGui extends JFrame{
 
 			model = new DefaultListModel();
 			dbList = new JList(model);
+
 			addWindowListener(new WindowAdapter() {
 			      public void windowClosing(WindowEvent e) {
 			    	  if(!messageFromServer.equals("#EXIT#")){
@@ -243,13 +248,6 @@ public class AuthenticationGui extends JFrame{
 			dbList.addMouseListener(new MouseAdapter(){
 				public void mouseClicked(MouseEvent me){
 					chatWith = dbList.getSelectedValue().toString();
-					if(chatWith != null){
-						try {
-							System.out.println(chatWith);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
-					}
 				}
 			  }
 			);
@@ -303,12 +301,17 @@ public class AuthenticationGui extends JFrame{
 			setVisible(true);
 		}
 		public void SENDButtonPressed(ActionEvent evt) {
-			try {
-				dout.writeUTF(username + " " + chatWith + " " + " " + jTextArea2.getText().toString());
-				jTextArea1.append("\n" + username + " Says:" + jTextArea2.getText().toString());
-				jTextArea2.setText("");
-			} catch (IOException e) {
-				e.printStackTrace();
+			if(dbList.isSelectionEmpty()){
+				JOptionPane.showMessageDialog(null, "Select the user to send message!","FATAL ERROR!",JOptionPane.ERROR_MESSAGE);
+			}
+			else{
+				try {
+					dout.writeUTF(username + " " + chatWith + " " + " " + jTextArea2.getText().toString());
+					jTextArea1.append("\n" + username + " Says :" + jTextArea2.getText().toString());
+					jTextArea2.setText("");
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 	    }
 
@@ -318,7 +321,8 @@ public class AuthenticationGui extends JFrame{
 				contactList = din.readUTF().split("#");
 				model.clear();
 				for(int i = 0; i < contactList.length; i++)
-					model.addElement(contactList[i]);
+					if(!contactList[i].equals(username))
+						model.addElement(contactList[i]);
 			}catch(Exception ex){}
 		}
 
@@ -326,12 +330,19 @@ public class AuthenticationGui extends JFrame{
 			while(true){
 				try{
 					messageFromServer = din.readUTF();
-					if(!messageFromServer.equals("#EXIT#")){
-						jTextArea1.append("\n" + messageFromServer);
+					if(messageFromServer.equals("#REFRESHLIST#")){
+						contactList = din.readUTF().split("#");
+						model.clear();
+						for(int i = 0; i < contactList.length; i++)
+							if(!contactList[i].equals(username))
+								model.addElement(contactList[i]);
 					}
-					else {
+					else if(messageFromServer.equals("#EXIT#")){
 						JOptionPane.showMessageDialog(null, "Server is Shut Down!!!\nSorry For Discomfort!!!","From Server",JOptionPane.ERROR_MESSAGE);
 						break;
+					}
+					else {
+						jTextArea1.append("\n" + messageFromServer);
 					}
 				}catch(Exception ex){
 					ex.printStackTrace();

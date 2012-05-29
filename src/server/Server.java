@@ -6,13 +6,12 @@ import java.util.*;
 import java.io.*;
 
 class Server{
-	final String DATABASE_URL = "jdbc:mysql://localhost/mail_db";
 	private Connection con;
 	private PreparedStatement pst;
 	private ResultSet rs;
 	private Statement st;
 	private static serverGUI sGUI;
-
+	private static dbAccessGUI dbAccGUI;
 	static Vector ClientSockets;
 	static Vector LoginNames;
 
@@ -30,7 +29,8 @@ class Server{
 	public static void main(String args[]) throws Exception{
 		sGUI = new serverGUI();
 		sGUI.setVisible(true);
-		Server ob=new Server();
+		dbAccGUI = new dbAccessGUI();
+		Server ob = new Server();
 	}
 
 class AcceptClient extends Thread{
@@ -41,17 +41,20 @@ class AcceptClient extends Thread{
 	private String login;
 	private String password;
 
+
 	private ArrayList<String> contactArrayList  = new ArrayList<String>();
 	private ArrayList<String> nameSurnameArrayList  = new ArrayList<String>();
 	private ArrayList<String> contactArrayListToRegistrate  = new ArrayList<String>();
 	
 	AcceptClient (Socket CSoc) throws Exception{
+		con = dbAccGUI.getCon();
 		ClientSocket=CSoc;
-
-		connect();
 
 		din=new DataInputStream(ClientSocket.getInputStream());
 		dout=new DataOutputStream(ClientSocket.getOutputStream());
+		
+		pst=con.prepareStatement("SELECT * FROM users WHERE user_name=? and password=?");
+		st = con.createStatement();
 		
 		username_pwd = din.readUTF().split("&");
 		if(username_pwd[0].equals("REGISTR"))
@@ -63,12 +66,19 @@ class AcceptClient extends Thread{
 				username_pwd=din.readUTF().split("&");
 			}
 			queryClientNameSurname();
-			dout.writeUTF("&true&"+arrayListToOneString(nameSurnameArrayList));
+			dout.writeUTF("&true&");  //+arrayListToOneString(nameSurnameArrayList));
 			sendContactList();
 			nameSurnameArrayList.clear();
 			sGUI.jTextArea1.append("\nUser Logged In :" + login);
 			LoginNames.add(login);
 			ClientSockets.add(ClientSocket);
+			for(int i=0;i<ClientSockets.size();i++){
+				if(!LoginNames.elementAt(i).equals(login)){
+					Socket ClSoc=(Socket)ClientSockets.elementAt(i);
+					DataOutputStream dataOutt=new DataOutputStream(ClSoc.getOutputStream());
+					dataOutt.writeUTF("\t"+login + " --> ENTERED THE ROOM");
+				}
+			}
 			sGUI.setSockets(ClientSockets);
 			start();
 		}
@@ -98,6 +108,16 @@ class AcceptClient extends Thread{
 			dout.writeBoolean(true);
 			String messgFromClient[] = 	din.readUTF().split("&");
 			st.executeUpdate("INSERT INTO users (Name, Surname, user_name, password)" + "VALUES ('"+messgFromClient[1]+"','"+messgFromClient[2]+"','"+messgFromClient[0]+"','"+messgFromClient[3]+"')");
+			databaseList();
+			for(int i=0;i<ClientSockets.size();i++){
+				try {
+					Socket ClSoc=(Socket)ClientSockets.elementAt(i);
+					DataOutputStream dataOut=new DataOutputStream(ClSoc.getOutputStream());
+					dataOut.writeUTF("#REFRESHLIST#");
+					dataOut.writeUTF(arrayListToOneString(contactArrayList));
+				} catch (IOException e) {}
+			}
+			contactArrayList.clear();
 			username_pwd = din.readUTF().split("&");
 			if(username_pwd[0].equals("REGISTR")){
 				contactArrayList.clear();
@@ -110,6 +130,7 @@ class AcceptClient extends Thread{
 	public void run(){
 		while(true){
 			try{
+				String a = new String();
 				String msgFromClient=new String();
 				msgFromClient=din.readUTF();
 				StringTokenizer st=new StringTokenizer(msgFromClient);
@@ -120,6 +141,7 @@ class AcceptClient extends Thread{
 				if(Sendto.equals("LOGOUT")){
 					for(iCount=0;iCount<LoginNames.size();iCount++){
 						if(LoginNames.elementAt(iCount).equals(SendFrom)){
+							a=LoginNames.elementAt(iCount).toString();
 							LoginNames.removeElementAt(iCount);
 							ClientSockets.removeElementAt(iCount);
 							sGUI.setSockets(ClientSockets);
@@ -148,6 +170,13 @@ class AcceptClient extends Thread{
 					else{}
 				}
 				if(Sendto.equals("LOGOUT")){
+					for(int i=0;i<ClientSockets.size();i++){
+						try {
+							Socket ClSoc=(Socket)ClientSockets.elementAt(i);
+							DataOutputStream dataOut=new DataOutputStream(ClSoc.getOutputStream());
+							dataOut.writeUTF("\t" + a + " --> LEFT THE ROOM!");
+						} catch (IOException e) {}
+					}
 					break;
 				}
 			}catch(Exception ex){
@@ -182,38 +211,6 @@ class AcceptClient extends Thread{
 				contactArrayList.clear();
 			}
 		}catch(Exception ex){}
-	}
-
-	public void connect(){
-		try{
-			Class.forName("com.mysql.jdbc.Driver");
-			con=DriverManager.getConnection(DATABASE_URL, "mail_login", "123456");
-			pst=con.prepareStatement("SELECT * FROM users WHERE user_name=? and password=?");
-			st = con.createStatement();
-
-			//print all users in a console
-			/*st = con.createStatement();
-			rs = st.executeQuery("SELECT * FROM users");
-			ResultSetMetaData metaData = rs.getMetaData();
-			int numberOfColumns = metaData.getColumnCount();
-			System.out.println( "Authors Table of users in Database:\n" );
-			for ( int i = 1; i <= numberOfColumns; i++ )
-				System.out.printf( "%-17s\t", metaData.getColumnName( i ) );
-				System.out.println();
-
-			while(rs.next())
-			{
-				for ( int i = 1; i <= numberOfColumns; i++ )
-					System.out.printf( "%-17s\t", rs.getObject( i ) );
-				System.out.println();
-			} // end while*/
-		}
-		catch( SQLException sqlException ){
-			sqlException.printStackTrace();
-		} // end catch
-		catch(Exception e){
-			System.out.println(e);
-		}
 	}
 
 	public boolean checkLogin(String[] arr){

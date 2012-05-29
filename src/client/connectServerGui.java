@@ -3,6 +3,7 @@ import javax.swing.*;
 import javax.swing.GroupLayout.Alignment;
 import java.awt.*;
 import java.awt.event.*;
+
 public class connectServerGui extends JFrame{
 	private JButton jButton1;
 	private JButton jButton2;
@@ -27,21 +28,21 @@ public class connectServerGui extends JFrame{
 		jTextField2 = new JTextField();
 		jButton1 = new JButton();
 		jButton2 = new JButton();
-		
+
 		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 		setBounds(new Rectangle(500, 250, 0, 0));
 
-		jLabel1.setFont(new Font("Tahoma", 0, 12)); // NOI18N
+		jLabel1.setFont(new Font("Tahoma", 0, 12));
 		jLabel1.setText("Address:");
 		
-		jLabel2.setFont(new Font("Tahoma", 0, 12)); // NOI18N
+		jLabel2.setFont(new Font("Tahoma", 0, 12));
 		jLabel2.setText("Port:");
 
-		jTextField1.setFont(new Font("Tahoma", 0, 12)); // NOI18N
+		jTextField1.setFont(new Font("Tahoma", 0, 12));
 		jTextField1.setText("localhost");
 
 		jTextField2.setEditable(false);
-		jTextField2.setFont(new Font("Tahoma", 0, 12)); // NOI18N
+		jTextField2.setFont(new Font("Tahoma", 0, 12));
 		jTextField2.setHorizontalAlignment(JTextField.CENTER);
 		jTextField2.setText("5217");
 

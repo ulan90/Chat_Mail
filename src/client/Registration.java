@@ -6,10 +6,11 @@ import java.awt.event.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Vector;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import java.net.Socket;
 
 import javax.swing.GroupLayout.Alignment;
 public class Registration extends JFrame{
@@ -53,7 +54,14 @@ public class Registration extends JFrame{
 		jButton1 = new JButton();
 		jButton2 = new JButton();
 
-		setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		setResizable(false);
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				setVisible(false);
+			}
+		});
+		
+		setBounds(new Rectangle(200, 50, 0, 0));
 
 		jLabel1.setFont(new Font("Tahoma", 0, 14));
 		jLabel1.setText("User Name:");
@@ -94,7 +102,7 @@ public class Registration extends JFrame{
 		jButton2.setText("Exit");
 		jButton2.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent evt) {
-				jButton2ActionPerformed(evt);
+				setVisible(false);
 			}
 		});
 
@@ -224,9 +232,5 @@ public class Registration extends JFrame{
 			return true;
 		}
 		else return false;
-	}
-
-	private void jButton2ActionPerformed(ActionEvent evt) {
-		
 	}
 }
